@@ -2,4 +2,4 @@
 Contributors
 ============
 
-* Vinay from MSI WSL <vinay.warrier@gmail.com>
+* Vinay Warrier <vinay.warrier@gmail.com>

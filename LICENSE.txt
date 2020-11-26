@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2020 Vinay from MSI WSL
+Copyright (c) 2020 Vinay Warrier
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
