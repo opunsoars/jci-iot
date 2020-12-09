@@ -8,6 +8,7 @@ aggs_SH = pd.read_csv("data/aggs_SH.csv")
 
 
 # choose player
+players = data.playerid.unique()
 p = "02"
 pdf = data.query("playerid==@p").set_index(["datetime"])
 pdf["acc_class"] = "default"
@@ -192,3 +193,44 @@ anno_HR = dict(
     font=dict(size=12),
     showarrow=False,
 )
+
+
+# table
+# FH | SH | Total
+# cols:
+# Total Distance
+# HI Dis
+# no. sprints
+# avg speed
+# max speed
+# max acc
+
+cols = [
+    "time_played",
+    "Distance[km]",
+    "High_Intensity_Distance[km]",
+    "#sprints_[25+ km/h]",
+    "Avg_Speed[km/h]",
+    "Max_Speed[km/h]",
+    "acc_max[m/s2]",
+    "HR_min[bpm]",
+    "HR_max[bpm]",
+    "HR_mean[bpm]",
+]
+table = pd.concat(
+    [
+        aggs_FH.query("player_id==@p")[cols],
+        aggs_SH.query("player_id==@p")[cols],
+        player_aggs.query("player_id==@p")[cols],
+    ]
+)
+table.index = ["First Half (FH)", "Second Half (SH)", "Full Time"]
+table.columns = [col.replace('_',' ') for col in table.columns]
+table = round(table, 2)
+table.rename(columns={"time played": "time played[mins]"}, inplace=True)
+
+# remaining todo
+# add table
+# slider?
+# callback dropdown
+## overview page

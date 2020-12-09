@@ -1,164 +1,322 @@
-import numpy as np
-import plotly.graph_objects as go
-
-# from src.jci_iot.prepare_data import load_data
-
-# data, player_aggs = load_data()
-
-# # choose player
-# p = "02"
-# pdf = data.query("playerid==@p").set_index(["datetime"])
-
-# # time = pdf["t"]
-# speed = pdf["speed[km/h]"]
-# distance = pdf["s[m]"]
-# acc = pdf["a[m/s2]"]
-# hr = pdf["hr[bpm]"]
-
-# speed_1 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index<'2018-10-31 19:30:00',"speed[km/h]"], mode="lines", name="speed[km/h] - half I")
-# distance_1 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index<'2018-10-31 19:30:00',"s[m]"], mode="lines", name="distance[m] - half I")
-# acc_1 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index<'2018-10-31 19:30:00',"a[m/s2]"], mode="lines", name="acceleration[m/s2] - half I")
-# hr_1 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index<'2018-10-31 19:30:00',"hr[bpm]"], mode="lines", name="heart-rate[bpm] - half I")
-
-# speed_2 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index>'2018-10-31 19:30:00',"speed[km/h]"], mode="lines", name="speed[km/h] - half II")
-# distance_2 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index>'2018-10-31 19:30:00',"s[m]"], mode="lines", name="distance[m] - half II")
-# acc_2 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index>'2018-10-31 19:30:00',"a[m/s2]"], mode="lines", name="acceleration[m/s2] - half II")
-# hr_2 = go.Scatter(x=pdf.index, y=pdf.loc[pdf.index>'2018-10-31 19:30:00',"hr[bpm]"], mode="lines", name="heart-rate[bpm] - half II")
-
-# np.random.seed(1)
-
-# N = 100
-# random_x = np.linspace(0, 1, N)
-# random_y0 = np.random.randn(N) + 5
-# random_y1 = np.random.randn(N)
-# random_y2 = np.random.randn(N) - 5
-
-# fig = go.Figure()
-
-# # Add traces
-# # fig.add_trace(go.Scatter(x=time, y=distance, mode="markers", name="distance"))
-# # fig.add_trace(go.Scatter(x=time, y=speed, mode="lines+markers", name="speed"))
-# fig.add_trace(go.Scatter(x=pdf.index, y=acc, mode="lines", name="acceleration"))
-
-# fig.show()
-
-
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-import plotly.express as px
+import dash_bootstrap_components as dbc
+import dash_table
+import pandas as pd
 import plotly.figure_factory as ff
-from traces import *
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-fig_svaHR = make_subplots(
-    rows=4,
-    cols=1,
-    shared_xaxes=True,
-    vertical_spacing=0.02,
-)
-
-fig_svaHR.add_trace(hr, row=1, col=1)
-fig_svaHR.add_trace(acc, row=2, col=1)
-fig_svaHR.add_trace(distance, row=3, col=1)
-fig_svaHR.add_trace(speed, row=4, col=1)
-fig_svaHR.add_trace(sprints, row=4, col=1)
+from traces import table
 
 
-# fig_svaHR.add_trace(banded_acc, row=2, col=2)
-# fig_svaHR.update_layout(barmode="stack")
-# fig_svaHR.add_trace(total_distance, row=3, col=2)
-# fig_svaHR.add_trace(banded_distance_FH, row=4, col=2)
-# fig_svaHR.add_trace(banded_distance_SH, row=4, col=2)
+data = pd.read_csv("data/processed_master.csv")
+player_aggs = pd.read_csv("data/aggregated_master.csv")
+aggs_FH = pd.read_csv("data/aggs_FH.csv")
+aggs_SH = pd.read_csv("data/aggs_SH.csv")
+
+players = data.playerid.unique()
 
 
-# Update yaxis properties
-fig_svaHR.update_yaxes(title_text=hr["name"], row=1, col=1)
-fig_svaHR.update_yaxes(title_text=acc["name"], row=2, col=1)
-fig_svaHR.update_yaxes(title_text=distance["name"], row=3, col=1)
-fig_svaHR.update_yaxes(title_text=speed["name"], row=4, col=1)
-fig_svaHR.update_xaxes(
-    showspikes=True,
-    spikemode="across",
-    spikesnap="cursor",
-    showline=True,
-    showgrid=False,
-)
-fig_svaHR.update_layout(
-    height=800,
-    width=800,
-    title_text="Stacked Subplots with Shared X-Axes",
-    showlegend=False,
-    hovermode="x",
-    spikedistance=-1,
-)
-fig_svaHR.update_layout(barmode="stack")
-fig_svaHR.update_layout(annotations=half_annos)
-# fig_svaHR.show()
+def get_updated_data(player):
+    p = str(player)
+    pdf = data.query("playerid==@p").set_index(["datetime"])
+    pdf["acc_class"] = "default"
+    pdf.loc[pdf["a[m/s2]"] > 3, "acc_class"] = "#acc>3m/s2"
+    pdf.loc[pdf["a[m/s2]"] > 4, "acc_class"] = "#acc>4m/s2"
+    pdf.loc[pdf["a[m/s2]"] < -3, "acc_class"] = "#dec>3m/s2"
+    pdf.loc[pdf["a[m/s2]"] < -4, "acc_class"] = "#dec>4m/s2"
 
-# # Add range slider
-# fig.update_layout(
-#     xaxis4=dict(
-#         rangeselector=dict(
-#             # buttons=list([
-#             #     dict(count=1,
-#             #          label="1m",
-#             #          step="month",
-#             #          stepmode="backward"),
-#             #     dict(count=6,
-#             #          label="6m",
-#             #          step="month",
-#             #          stepmode="backward"),
-#             #     dict(count=1,
-#             #          label="YTD",
-#             #          step="year",
-#             #          stepmode="todate"),
-#             #     dict(count=1,
-#             #          label="1y",
-#             #          step="year",
-#             #          stepmode="backward"),
-#             #     dict(step="all")
-#             # ])
-#         ),
-#         rangeslider=dict(visible=True),
-#         type="date",
-#     )
-# )
-fig_banded_dis = go.Figure()
-fig_banded_dis.add_trace(banded_distance_FH)
-fig_banded_dis.add_trace(banded_distance_SH)
-fig_banded_dis.update_layout(
-    barmode="stack",
-    legend=dict(
-        x=0.6,
-        y=0.8,
-        traceorder="reversed",
-    ),
-)
-fig_banded_dis.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0))
-fig_banded_dis.update_layout(annotations=dis_band_anno)
+    fh_filter = pdf.index < "2018-10-31 19:30:00"
+    sh_filter = pdf.index > "2018-10-31 19:30:00"
+
+    # traces individual
+    hr = go.Scatter(x=pdf.index, y=pdf["hr[bpm]"], mode="lines", name="heart-rate[bpm]", connectgaps=False, xaxis="x")
+    acc = go.Scatter(
+        x=pdf.index, y=pdf["a[m/s2]"], mode="lines", name="acceleration[m/s2]", connectgaps=False, xaxis="x"
+    )
+    distance = go.Scatter(x=pdf.index, y=pdf["s[m]"], mode="lines", name="distance[m]", connectgaps=False, xaxis="x")
+    speed = go.Scatter(
+        x=pdf.index, y=pdf["speed[km/h]"], mode="lines", name="speed[km/h]", connectgaps=False, xaxis="x"
+    )
+    sprints = go.Scatter(
+        x=pdf.loc[pdf["speed[km/h]"] > 25, "speed[km/h]"].index,
+        y=pdf.loc[pdf["speed[km/h]"] > 25, "speed[km/h]"].values,
+        mode="markers",
+        marker=dict(size=5, color="yellow", symbol="star", line=dict(width=1, color="DarkSlateGrey")),
+        name="sprints",
+        # connectgaps=False,
+        xaxis="x",
+    )
+
+    half_annos = []
+    acc_FH_max = dict(
+        xref="x",
+        yref="y2",
+        x=pdf.loc[fh_filter, "a[m/s2]"].idxmax(),
+        y=pdf.loc[fh_filter, "a[m/s2]"].max(),
+        text=f"Max FH: {round(pdf.loc[fh_filter,'a[m/s2]'].max(),2)} m/s2",
+        showarrow=True,
+        arrowhead=1,
+    )
+
+    hr_FH_max = dict(
+        xref="x",
+        yref="y",
+        x=pdf.loc[fh_filter, "hr[bpm]"].idxmax(),
+        y=pdf.loc[fh_filter, "hr[bpm]"].max(),
+        text=f"Max FH: {round(pdf.loc[fh_filter,'hr[bpm]'].max(),2)} BPM",
+        showarrow=True,
+        arrowhead=1,
+    )
+
+    half_annos.extend([acc_FH_max, hr_FH_max])
+
+    if p != "16":
+        acc_SH_max = dict(
+            xref="x",
+            yref="y2",
+            x=pdf.loc[sh_filter, "a[m/s2]"].idxmax(),
+            y=pdf.loc[sh_filter, "a[m/s2]"].max(),
+            text=f"Max SH: {round(pdf.loc[sh_filter,'a[m/s2]'].max(),2)} m/s2",
+            showarrow=True,
+            arrowhead=1,
+        )
+
+        hr_SH_max = dict(
+            xref="x",
+            yref="y",
+            x=pdf.loc[sh_filter, "hr[bpm]"].idxmax(),
+            y=pdf.loc[sh_filter, "hr[bpm]"].max(),
+            text=f"Max SH: {round(pdf.loc[sh_filter,'hr[bpm]'].max(),2)} BPM",
+            showarrow=True,
+            arrowhead=1,
+        )
+
+        half_annos.extend([acc_SH_max, hr_SH_max])
+
+    fig_svaHR = make_subplots(
+        rows=4,
+        cols=1,
+        shared_xaxes=True,
+        # vertical_spacing=0.02,
+    )
+
+    fig_svaHR.add_trace(hr, row=1, col=1)
+    fig_svaHR.add_trace(acc, row=2, col=1)
+    fig_svaHR.add_trace(distance, row=3, col=1)
+    fig_svaHR.add_trace(speed, row=4, col=1)
+    fig_svaHR.add_trace(sprints, row=4, col=1)
+
+    # Update yaxis properties
+    fig_svaHR.update_yaxes(title_text=hr["name"], row=1, col=1)
+    fig_svaHR.update_yaxes(title_text=acc["name"], row=2, col=1)
+    fig_svaHR.update_yaxes(title_text=distance["name"], row=3, col=1)
+    fig_svaHR.update_yaxes(title_text=speed["name"], row=4, col=1)
+
+    # Update xaxis properties
+    fig_svaHR.update_xaxes(
+        showspikes=True,
+        spikemode="across",
+        spikesnap="cursor",
+        showline=True,
+        showgrid=False,
+    )
+
+    # update layout
+    fig_svaHR.update_layout(
+        height=600,
+        width=800,
+        # title_text="Stacked Subplots with Shared X-Axes",
+        margin=dict(l=0, r=0, t=20, b=0),
+        showlegend=False,
+        hovermode="x",
+        spikedistance=-1,
+        barmode="stack",
+        annotations=half_annos,
+    )
+
+    # -----------------------------------------------------------------------------------------------
+    sel_cols = aggs_FH.columns[4:9]
+    banded_distance_FH = go.Bar(
+        y=sel_cols,
+        x=list(aggs_FH.query("player_id==@p")[sel_cols].values.flatten()),
+        name="FH",
+        orientation="h",
+        # marker=dict(
+        #     color='rgba(246, 78, 139, 0.6)',
+        #     line=dict(color='rgba(246, 78, 139, 1.0)', width=3)
+        # )
+    )
+    sel_cols = aggs_SH.columns[4:9]
+    banded_distance_SH = go.Bar(
+        y=sel_cols,
+        x=list(aggs_SH.query("player_id==@p")[sel_cols].values.flatten()),
+        name="SH",
+        orientation="h",
+        # marker=dict(
+        #     color='rgba(246, 78, 139, 0.6)',
+        #     line=dict(color='rgba(246, 78, 139, 1.0)', width=3)
+        # )
+    )
+
+    dis_band_anno = []
+    for y, x in zip(sel_cols, list(player_aggs.query("player_id==@p")[sel_cols].values[0])):
+        dis_band_anno.append(
+            dict(
+                # xref="x2",
+                # yref="y8",
+                y=y,
+                x=x + 1,
+                text=str(round(x, 2)) + " km",
+                font=dict(family="Arial", size=12, color="black"),
+                showarrow=False,
+            )
+        )
+    fig_banded_dis = go.Figure()
+    fig_banded_dis.add_trace(banded_distance_FH)
+    fig_banded_dis.add_trace(banded_distance_SH)
+    fig_banded_dis.update_layout(
+        barmode="stack",
+        legend=dict(
+            x=0.6,
+            y=0.8,
+            traceorder="reversed",
+        ),
+    )
+    fig_banded_dis.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0))
+    fig_banded_dis.update_layout(annotations=dis_band_anno)
+
+    # acc bands stack bar
+    sel_cols = ["#dec>4m/s2", "#dec>3m/s2", "#acc>3m/s2", "#acc>4m/s2"]
+    banded_acc = go.Bar(
+        x=player_aggs.query("player_id==@p")[sel_cols].to_dict("split")["columns"],
+        y=player_aggs.query("player_id==@p")[sel_cols].to_dict("split")["data"][0],
+        name="bandwise_accelerations",
+        orientation="v",
+        # marker=dict(
+        #     color='rgba(246, 78, 139, 0.6)',
+        #     line=dict(color='rgba(246, 78, 139, 1.0)', width=3)
+        # )
+    )
+
+    fig_banded_acc = go.Figure()
+    fig_banded_acc.add_trace(banded_acc)
+    fig_banded_acc.update_layout(
+        barmode="stack",
+        # legend=dict(
+        #     x=0.6,
+        #     y=0.8,
+        #     traceorder="grouped+reversed",
+        # ),
+    )
+    fig_banded_acc.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0))
+
+    # HR two periods hist overlap
+    hr_fh = pdf.query("playerid==@p").loc[fh_filter, "hr[bpm]"].dropna().values
+    hist_data = [hr_fh]
+    group_labels = ["FH BPM"]
+    if p != "16":
+        hr_sh = pdf.query("playerid==@p").loc[sh_filter, "hr[bpm]"].dropna().values
+
+        hist_data = [hr_fh, hr_sh]
+        group_labels = ["FH BPM", "SH BPM"]
+
+    fig_HR_dist = ff.create_distplot(hist_data, group_labels, bin_size=5, show_rug=False, histnorm="")
+    fig_HR_dist.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0), legend=dict(x=0.1, y=0.9))
+
+    names = ["50-60% HRmax", "60-70% HRmax", "70-80% HRmax", "80-90% HRmax", "90-100% HRmax"]
+    colors = ["#C79C3E", "#C7843E", "#C76D3E", "#C7553E", "#C73E3E"]
+    band_values = player_aggs.query("player_id==@p").T[-5:].values
+    banded_HR_traces = [
+        go.Bar(
+            y=["HR"],
+            x=band_values[i],
+            width=0.3,
+            name=names[i],
+            text=f"{round(band_values[i][0],1)}mins",
+            marker_color=colors[i],
+            orientation="h",
+            # marker=dict(
+            #     color='rgba(246, 78, 139, 0.6)',
+            #     line=dict(color='rgba(246, 78, 139, 1.0)', width=3)
+            # )
+        )
+        for i in range(5)
+    ]
+
+    # display min/max/mean HR
+    anno_HR = dict(
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=0.1,
+        text=f"Min: {round(pdf['hr[bpm]'].min(),2)} BPM | Avg: {round(pdf['hr[bpm]'].mean(),2)} BPM | Max: {round(pdf['hr[bpm]'].max(),2)} BPM",
+        font=dict(size=12),
+        showarrow=False,
+    )
+
+    # banded HR
+    fig_banded_HR = go.Figure()
+    for trace in banded_HR_traces:
+        fig_banded_HR.add_trace(trace)
+    fig_banded_HR.update_layout(barmode="stack")
+    fig_banded_HR.update_layout(
+        height=300, width=400, margin=dict(l=0, r=0, t=20, b=0), legend=dict(x=0.1, y=0.95, orientation="h")
+    )
+    fig_banded_HR.update_layout(annotations=[anno_HR])
+
+    return fig_svaHR, fig_banded_dis, fig_banded_acc, fig_HR_dist, fig_banded_HR
+
+
+def get_player_data(player):
+    p = str(player)
+    pdf = data.query("playerid==@p").set_index(["datetime"])
+    pdf["acc_class"] = "default"
+    pdf.loc[pdf["a[m/s2]"] > 3, "acc_class"] = "#acc>3m/s2"
+    pdf.loc[pdf["a[m/s2]"] > 4, "acc_class"] = "#acc>4m/s2"
+    pdf.loc[pdf["a[m/s2]"] < -3, "acc_class"] = "#dec>3m/s2"
+    pdf.loc[pdf["a[m/s2]"] < -4, "acc_class"] = "#dec>4m/s2"
+    return pdf
+
 
 # banded accelerations
-fig_banded_acc = go.Figure()
-fig_banded_acc.add_trace(banded_acc)
-fig_banded_acc.update_layout(
-    barmode="stack",
-    # legend=dict(
-    #     x=0.6,
-    #     y=0.8,
-    #     traceorder="grouped+reversed",
-    # ),
-)
-fig_banded_acc.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0))
+
 # fig_banded_acc.update_layout(annotations=dis_band_anno)
 
 
-fig_HR_dist = ff.create_distplot(hist_data, group_labels, bin_size=5, show_rug=False, histnorm= '')
-fig_HR_dist.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0), legend=dict(x=0.1, y=0.9))
+# infotable
+# table=table.iloc[:,:4].reset_index()
+table = table.reset_index()
 
+info_table = dash_table.DataTable(
+    id="table",
+    columns=[{"name": i, "id": i} for i in table.columns],
+    data=table.to_dict("records"),
+    sort_action="native",
+    # filter_action="native",
+    # style_cell=dict(textAlign="left"),
+    # style_header=dict(backgroundColor="paleturquoise"),
+    # style_data=dict(backgroundColor="lavender"),
+    # css={"rule": "display: inline; white-space: inherit; overflow: inherit; text-overflow: inherit"},
+    # style_data={"whiteSpace": "normal"},
+    # style_cell_conditional=[{"if": {"row_index": "even"}, "backgroundColor": "#f9f9f9"}],
+    style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"}],
+    style_header={"backgroundColor": "rgb(230, 230, 230)", "fontWeight": "bold"},
+    style_cell={
+        "padding": "0px",
+        "midWidth": "0px",
+        "width": "0%",
+        "font-family": "arial",
+        "font-size": "12px",
+        "textAlign": "center",
+        "border": "white",
+        "whiteSpace": "normal",
+        "height": "auto",
+        "maxWidth": "0",
+    },
+    # style_cell={
+    # },
+)
 
-# banded HR
-fig_banded_HR = go.Figure()
-for trace in banded_HR_traces:
-    fig_banded_HR.add_trace(trace)
-fig_banded_HR.update_layout(barmode="stack")
-fig_banded_HR.update_layout(height=300, width=400, margin=dict(l=0, r=0, t=20, b=0), legend=dict(x=0.1, y=0.95, orientation='h'))
-fig_banded_HR.update_layout(annotations=[anno_HR])
+info_table2 = dbc.Table.from_dataframe(
+    table, bordered=True, dark=True, hover=True, responsive=True, striped=True, size="sm"
+)
