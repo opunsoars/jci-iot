@@ -30,6 +30,7 @@ def load_data():
             df["t"] = df["datetime"].dt.time
             df["s[m]"] = df["speed[km/h]"] * 0.1 / 3.6  # time taken is 100 ms = 0.1s
             df["a[m/s2]"] = (df["speed[km/h]"] / 3.6).diff() / 0.1
+            df = df[df['a[m/s2]']>-8]
             data = pd.concat([data, df])
             # print(f"{file_}: {df.shape[0]} rows | data: {data.shape[0]} rows")
 

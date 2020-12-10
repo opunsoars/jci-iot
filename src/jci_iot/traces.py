@@ -225,12 +225,134 @@ table = pd.concat(
     ]
 )
 table.index = ["First Half (FH)", "Second Half (SH)", "Full Time"]
-table.columns = [col.replace('_',' ') for col in table.columns]
+table.columns = [col.replace("_", " ") for col in table.columns]
 table = round(table, 2)
 table.rename(columns={"time played": "time played[mins]"}, inplace=True)
 
-# remaining todo
-# add table
-# slider?
-# callback dropdown
-## overview page
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+colors = {
+    "1": "#e41a1c",
+    "2": "#377eb8",
+    "5": "#4daf4a",
+    "7": "#984ea3",
+    "8": "#ff7f00",
+    "9": "#01665e",
+    "10": "#a65628",
+    "12": "#f781bf",
+    "16": "#999999",
+}
+# player vs HR box ranked
+player_order = data.groupby(["playerid"])["hr[bpm]"].mean().sort_values(ascending=False).index
+traces = [
+    go.Box(
+        y=data.query("playerid==@player")["hr[bpm]"], name=f"P{player}", marker_color=colors[str(player)], boxmean=True
+    )
+    for i, player in enumerate(player_order)
+]
+fig_agg_hr = go.Figure(traces)
+fig_agg_hr.update_layout(
+    title="<b>HR(bpm)</b>", height=400, width=400, margin=dict(l=0, r=0, t=30, b=0), showlegend=False
+)
+# fig_agg_hr.update_layout(annotations=[anno_HR])
+# fig.show()
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# player vs speed box ranked
+player_order = data.groupby(["playerid"])["speed[km/h]"].mean().sort_values(ascending=False).index
+traces = [
+    go.Box(
+        y=data.query("playerid==@player")["speed[km/h]"],
+        name=f"P{player}",
+        marker_color=colors[str(player)],
+        boxmean=True,
+    )
+    for i, player in enumerate(player_order)
+]
+fig_agg_speed = go.Figure(traces)
+fig_agg_speed.update_layout(
+    title="<b>Speed(km/h)</b>", height=400, width=400, margin=dict(l=0, r=0, t=30, b=0), showlegend=False
+)
+# fig.show()
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+df = player_aggs.sort_values("Distance[km]", ascending=False)
+fig_agg_distance = go.Figure(
+    data=[
+        go.Bar(
+            y=df["Distance[km]"],
+            x=df.player_id.apply(lambda x: f"P{int(x)}"),
+            text=df["Distance[km]"].apply(lambda x: f"{round(x,2)}km"),
+            textfont=dict(size=25),
+            marker_color=df.player_id.apply(lambda x: colors[str(x)]),
+        )
+    ]
+)
+fig_agg_distance.update_traces(textposition="outside")
+fig_agg_distance.update_layout(
+    title="<b>Distance Covered(km)</b>", height=400, width=400, margin=dict(l=0, r=0, t=30, b=0), showlegend=False
+)
+
+# fig.show()
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# all players HR bands stacked
+# x = b(n) value | y = player
+
+colors = ["#fee090", "#fdae61", "#f46d43", "#d73027", "#a50026"]
+names = ["50-60% HRmax", "60-70% HRmax", "70-80% HRmax", "80-90% HRmax", "90-100% HRmax"]
+bands = player_aggs[
+    [
+        "player_id",
+        "mins_in_HR_Zone_1",
+        "mins_in_HR_Zone_2",
+        "mins_in_HR_Zone_3",
+        "mins_in_HR_Zone_4",
+        "mins_in_HR_Zone_5",
+    ]
+]
+bands["player_id"] = bands["player_id"].apply(lambda x: f"P{x}")
+bands["sums"] = bands.sum(axis=1)
+bands = bands.sort_values(["sums"])
+
+band_stack = [
+    go.Bar(
+        x=bands.iloc[:, i],
+        y=bands["player_id"],
+        width=0.5,
+        name=names[i - 1],
+        # text=f"{round(bands.loc[:, 'sums'].values,1)}mins",
+        marker_color=colors[i - 1],
+        marker_line_color="#4d4d4d",
+        marker_line_width=0.5,
+        orientation="h",
+    )
+    for i in range(1, 6)
+]
+
+fig_agg_hr_bands = go.Figure(data=band_stack)
+fig_agg_hr_bands.update_layout(
+    barmode="stack",
+    # plot_bgcolor="#4d4d4d"
+)
+fig_agg_hr_bands.update_layout(
+    title="<b>Mins in HR bands</b>",
+    height=400,
+    width=400,
+    margin=dict(l=0, r=0, t=30, b=0),
+    legend=dict(x=0.1, y=-0.1, orientation="h"),
+)
+# fig.show()
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# all players: top speed vs top HR
+# [Player choose][agg col 1] vs [Player choose][agg col 2]
+# [P1] [hr] vs [P1][speed]
+# [P1][hr]
